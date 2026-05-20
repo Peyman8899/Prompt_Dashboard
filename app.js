@@ -501,11 +501,11 @@
         .map((metric, index) => `${index + 1}. ${metric.name}: ${metric.definition}`)
         .join("\n");
 
-      const groundTruthSection = groundTruth
-        ? `\n\nGround truth reference to compare against:\n${groundTruth}`
-        : "\n\nNo ground truth reference was provided. Evaluate using the transcript, prompt, rubric, and output only.";
+      const evaluationMode = groundTruth
+        ? `Evaluation mode: Ground truth comparison.\nUse the ground truth as the source of truth. Score the generated output by comparing it against the ground truth, penalizing missing, extra, contradictory, or incorrectly structured information. Use the transcript only as optional context for understanding the task, not as the primary scoring reference.\n\nGround truth reference:\n${groundTruth}`
+        : "Evaluation mode: Transcript-based review.\nNo ground truth was provided. Score the generated output by comparing it against the clinical transcript/input and the prompt. Penalize unsupported claims, missing important transcript details, incorrect emphasis, unsafe clinical interpretation, and format errors.";
 
-      const evalPrompt = `Evaluate the model output using the rubric below. Score each metric from 0 to 5; all metrics count equally. If a ground truth reference is provided, compare the generated output against it and penalize missing, extra, or contradictory information.\n\nRubric:\n${rubric}\n\nReturn:\n1. Overall average score from 0-5\n2. Score for each metric from 0-5\n3. Evidence-based rationale for each score, including ground-truth mismatches when relevant\n4. Top 3 fixes to improve the prompt or output\n\nAlso include this exact machine-readable block at the end:\nSCORECARD_JSON\n{\"metric_scores\":[{\"name\":\"Metric name\",\"score\":4.0}]}\nEND_SCORECARD_JSON\n\nPrompt used:\n${prompt || "[No prompt provided]"}${groundTruthSection}\n\nModel output to evaluate:\n${output}`;
+      const evalPrompt = `Evaluate the model output using the rubric below. Score each metric from 0 to 5; all metrics count equally.\n\n${evaluationMode}\n\nRubric:\n${rubric}\n\nReturn:\n1. Overall average score from 0-5\n2. Score for each metric from 0-5\n3. Evidence-based rationale for each score\n4. Top 3 fixes to improve the prompt or output\n\nAlso include this exact machine-readable block at the end:\nSCORECARD_JSON\n{\"metric_scores\":[{\"name\":\"Metric name\",\"score\":4.0}]}\nEND_SCORECARD_JSON\n\nPrompt used:\n${prompt || "[No prompt provided]"}\n\nModel output to evaluate:\n${output}`;
 
       try {
         const response = await fetch("/api/generate", {
