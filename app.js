@@ -409,7 +409,7 @@
 
     async function generateOutput() {
       const apiKey = els.apiKey.value.trim() || localStorage.getItem(apiKeyStorageKey) || "";
-      const model = els.model.value.trim() || "gpt-5-mini";
+      const model = els.model.value.trim() || "gpt-5.4";
       const transcript = els.transcript.value.trim();
       const prompt = els.prompt.value.trim();
 
@@ -467,7 +467,7 @@
 
     async function evaluateOutput() {
       const apiKey = els.apiKey.value.trim() || localStorage.getItem(apiKeyStorageKey) || "";
-      const model = els.model.value.trim() || "gpt-5-mini";
+      const model = els.model.value.trim() || "gpt-5.4";
       const transcript = els.transcript.value.trim();
       const prompt = els.prompt.value.trim();
       const output = els.output.value.trim();

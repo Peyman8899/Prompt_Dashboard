@@ -32,7 +32,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             api_key = payload.get("apiKey") or os.environ.get("OPENAI_API_KEY")
-            model = payload.get("model") or "gpt-5-mini"
+            model = payload.get("model") or "gpt-5.4"
             prompt = (payload.get("prompt") or "").strip()
             transcript = (payload.get("transcript") or "").strip()
             title = (payload.get("title") or "").strip()
