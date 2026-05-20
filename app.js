@@ -3,6 +3,7 @@
       transcript: document.getElementById("transcript"),
       prompt: document.getElementById("prompt"),
       output: document.getElementById("output"),
+      groundTruth: document.getElementById("groundTruth"),
       caseTitle: document.getElementById("caseTitle"),
       apiKey: document.getElementById("apiKey"),
       apiNote: document.getElementById("apiNote"),
@@ -14,13 +15,16 @@
       evaluationReport: document.getElementById("evaluationReport"),
       transcriptWords: document.getElementById("transcriptWords"),
       promptWords: document.getElementById("promptWords"),
+      groundTruthWords: document.getElementById("groundTruthWords"),
       tokenEstimate: document.getElementById("tokenEstimate"),
       placeholderState: document.getElementById("placeholderState"),
       transcriptChars: document.getElementById("transcriptChars"),
       promptChars: document.getElementById("promptChars"),
       outputChars: document.getElementById("outputChars"),
+      groundTruthChars: document.getElementById("groundTruthChars"),
       outputScore: document.getElementById("outputScore"),
       outputStatus: document.getElementById("outputStatus"),
+      groundTruthStatus: document.getElementById("groundTruthStatus"),
       autosaveStatus: document.getElementById("autosaveStatus"),
       promptMode: document.getElementById("promptMode"),
       savedPromptSelect: document.getElementById("savedPromptSelect"),
@@ -46,6 +50,11 @@
       {
         name: "Completeness",
         definition: "The answer covers all requested sections and important clinical details.",
+        score: ""
+      },
+      {
+        name: "Ground truth match",
+        definition: "The generated output aligns with the provided reference answer or expected extraction.",
         score: ""
       },
       {
@@ -93,16 +102,20 @@
       const transcriptWords = wordCount(els.transcript.value);
       const promptWords = wordCount(els.prompt.value);
       const outputWords = wordCount(els.output.value);
-      const estimate = Math.ceil((els.transcript.value.length + els.prompt.value.length + els.output.value.length) / 4);
+      const groundTruthWords = wordCount(els.groundTruth.value);
+      const estimate = Math.ceil((els.transcript.value.length + els.prompt.value.length + els.output.value.length + els.groundTruth.value.length) / 4);
       els.transcriptWords.textContent = formatNumber(transcriptWords);
       els.promptWords.textContent = formatNumber(promptWords);
+      els.groundTruthWords.textContent = formatNumber(groundTruthWords);
       els.tokenEstimate.textContent = formatNumber(estimate);
       els.placeholderState.textContent = els.prompt.value.includes("{{transcript}}") ? "Found" : "Missing";
       els.placeholderState.style.color = els.prompt.value.includes("{{transcript}}") ? "var(--accent)" : "var(--rose)";
       els.transcriptChars.textContent = `${formatNumber(els.transcript.value.length)} chars`;
       els.promptChars.textContent = `${formatNumber(els.prompt.value.length)} chars`;
       els.outputChars.textContent = `${formatNumber(els.output.value.length)} chars`;
+      els.groundTruthChars.textContent = `${formatNumber(els.groundTruth.value.length)} chars`;
       els.outputStatus.textContent = outputWords ? `${formatNumber(outputWords)} output words` : "Ready";
+      els.groundTruthStatus.textContent = groundTruthWords ? `${formatNumber(groundTruthWords)} GT words` : "Optional reference";
     }
 
     function cloneDefaultMetrics() {
@@ -325,6 +338,7 @@
         transcript: els.transcript.value,
         prompt: els.prompt.value,
         output: els.output.value,
+        groundTruth: els.groundTruth.value,
         metrics,
         evaluationReport: els.evaluationReport.value,
         savedPromptId: els.savedPromptSelect.value,
@@ -350,6 +364,7 @@
         els.transcript.value = payload.transcript || "";
         els.prompt.value = payload.prompt || templates.summarize;
         els.output.value = payload.output || "";
+        els.groundTruth.value = payload.groundTruth || "";
         metrics = Array.isArray(payload.metrics) && payload.metrics.length ? normalizeMetrics(payload.metrics) : cloneDefaultMetrics();
         els.evaluationReport.value = payload.evaluationReport || "";
         if (payload.savedPromptId) {
@@ -456,6 +471,7 @@
       const transcript = els.transcript.value.trim();
       const prompt = els.prompt.value.trim();
       const output = els.output.value.trim();
+      const groundTruth = els.groundTruth.value.trim();
       const usableMetrics = metrics.filter((metric) => metric.name.trim() || metric.definition.trim());
 
       if (!apiKey) {
@@ -485,7 +501,11 @@
         .map((metric, index) => `${index + 1}. ${metric.name}: ${metric.definition}`)
         .join("\n");
 
-      const evalPrompt = `Evaluate the model output using the rubric below. Score each metric from 0 to 5; all metrics count equally.\n\nRubric:\n${rubric}\n\nReturn:\n1. Overall average score from 0-5\n2. Score for each metric from 0-5\n3. Evidence-based rationale for each score\n4. Top 3 fixes to improve the prompt or output\n\nAlso include this exact machine-readable block at the end:\nSCORECARD_JSON\n{\"metric_scores\":[{\"name\":\"Metric name\",\"score\":4.0}]}\nEND_SCORECARD_JSON\n\nPrompt used:\n${prompt || "[No prompt provided]"}\n\nModel output to evaluate:\n${output}`;
+      const groundTruthSection = groundTruth
+        ? `\n\nGround truth reference to compare against:\n${groundTruth}`
+        : "\n\nNo ground truth reference was provided. Evaluate using the transcript, prompt, rubric, and output only.";
+
+      const evalPrompt = `Evaluate the model output using the rubric below. Score each metric from 0 to 5; all metrics count equally. If a ground truth reference is provided, compare the generated output against it and penalize missing, extra, or contradictory information.\n\nRubric:\n${rubric}\n\nReturn:\n1. Overall average score from 0-5\n2. Score for each metric from 0-5\n3. Evidence-based rationale for each score, including ground-truth mismatches when relevant\n4. Top 3 fixes to improve the prompt or output\n\nAlso include this exact machine-readable block at the end:\nSCORECARD_JSON\n{\"metric_scores\":[{\"name\":\"Metric name\",\"score\":4.0}]}\nEND_SCORECARD_JSON\n\nPrompt used:\n${prompt || "[No prompt provided]"}${groundTruthSection}\n\nModel output to evaluate:\n${output}`;
 
       try {
         const response = await fetch("/api/generate", {
@@ -591,12 +611,29 @@
       toast("Output copied");
     }
 
+    async function copyGroundTruth() {
+      await navigator.clipboard.writeText(els.groundTruth.value);
+      toast("Ground truth copied");
+    }
+
+    function useOutputAsGroundTruth() {
+      if (!els.output.value.trim()) {
+        toast("Generate or paste output first");
+        els.output.focus();
+        return;
+      }
+      els.groundTruth.value = els.output.value;
+      saveDraft();
+      toast("Output copied into ground truth");
+    }
+
     function exportDraft() {
       const payload = {
         title: els.caseTitle.value,
         transcript: els.transcript.value,
         prompt: els.prompt.value,
         output: els.output.value,
+        groundTruth: els.groundTruth.value,
         metrics,
         evaluationReport: els.evaluationReport.value,
         exportedAt: new Date().toISOString()
@@ -620,6 +657,7 @@
           els.transcript.value = payload.transcript || "";
           els.prompt.value = payload.prompt || "";
           els.output.value = payload.output || "";
+          els.groundTruth.value = payload.groundTruth || "";
           metrics = Array.isArray(payload.metrics) && payload.metrics.length ? normalizeMetrics(payload.metrics) : cloneDefaultMetrics();
           els.evaluationReport.value = payload.evaluationReport || "";
           renderMetrics();
@@ -637,6 +675,8 @@
     document.getElementById("compileBtn").addEventListener("click", compilePrompt);
     document.getElementById("rubricBtn").addEventListener("click", addRubric);
     document.getElementById("copyOutput").addEventListener("click", copyOutput);
+    document.getElementById("copyGroundTruth").addEventListener("click", copyGroundTruth);
+    document.getElementById("pasteOutputToGroundTruth").addEventListener("click", useOutputAsGroundTruth);
     document.getElementById("savePromptBtn").addEventListener("click", saveCurrentPromptSet);
     document.getElementById("loadPromptBtn").addEventListener("click", loadSelectedPromptSet);
     document.getElementById("deletePromptBtn").addEventListener("click", deleteSelectedPromptSet);
@@ -690,6 +730,7 @@
       els.transcript.value = "";
       els.prompt.value = templates.summarize;
       els.output.value = "";
+      els.groundTruth.value = "";
       saveDraft();
       toast("Dashboard reset");
     });
@@ -746,7 +787,7 @@
       event.target.value = "";
     });
 
-    [els.transcript, els.prompt, els.output, els.caseTitle, els.evaluationReport].forEach((field) => {
+    [els.transcript, els.prompt, els.output, els.groundTruth, els.caseTitle, els.evaluationReport].forEach((field) => {
       field.addEventListener("input", saveDraft);
     });
 

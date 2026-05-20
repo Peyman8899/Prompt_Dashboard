@@ -122,7 +122,7 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
       gap: 10px;
       padding: 12px 22px;
       border-bottom: 1px solid rgba(217, 211, 201, 0.78);
@@ -185,7 +185,7 @@
     main {
       padding: 16px 22px 22px;
       display: grid;
-      grid-template-columns: minmax(280px, 1.15fr) minmax(280px, 0.95fr) minmax(280px, 1fr);
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
       gap: 14px;
       min-height: 0;
     }

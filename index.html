@@ -26,6 +26,7 @@
     <section class="stats" aria-label="Document statistics">
       <div class="stat"><b id="transcriptWords">0</b><span>Transcript words</span></div>
       <div class="stat"><b id="promptWords">0</b><span>Prompt words</span></div>
+      <div class="stat"><b id="groundTruthWords">0</b><span>Ground truth words</span></div>
       <div class="stat"><b id="tokenEstimate">0</b><span>Token estimate</span></div>
       <div class="stat"><b id="placeholderState">Missing</b><span>Transcript slot</span></div>
     </section>
@@ -139,6 +140,28 @@
           </span>
         </div>
           </section>
+
+      <section class="pane" data-pane="groundTruth">
+        <div class="pane-head">
+          <div class="pane-title">
+            <h2>Ground Truth</h2>
+            <p>Add the reference answer or expected extraction to compare against generated output during evaluation.</p>
+          </div>
+          <div class="pane-tools">
+            <button class="icon" type="button" data-clear="groundTruth" title="Clear ground truth" aria-label="Clear ground truth">×</button>
+            <button class="icon" type="button" data-expand="groundTruth" title="Focus ground truth" aria-label="Focus ground truth">⛶</button>
+          </div>
+        </div>
+        <div class="microbar">
+          <button type="button" id="copyGroundTruth">Copy GT</button>
+          <button type="button" id="pasteOutputToGroundTruth">Use Output as GT</button>
+        </div>
+        <textarea id="groundTruth" spellcheck="true" placeholder="Paste the gold-standard summary, expected JSON, or rubric reference here..."></textarea>
+        <div class="pane-foot">
+          <span class="status" id="groundTruthStatus">Optional reference</span>
+          <span class="chip" id="groundTruthChars">0 chars</span>
+        </div>
+      </section>
         </main>
 
         <section class="evaluation" aria-label="Evaluation metrics">
